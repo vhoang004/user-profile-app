@@ -8,58 +8,54 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
-use App\Models\User;
 use Illuminate\Support\Facades\Storage;
+use App\Models\User;
 
 class ProfileController extends Controller
 {
     /**
      * Display the user's profile form.
      */
-    public function show($id)
-    {
-        $user = User::findOrFail($id);
-        return view('profile.show', compact('user'));
-    }
-
-    public function edit(Request $request): View
+    public function edit()
     {
         $user = Auth::user();
         return view('profile.edit', compact('user'));
-
     }
 
-    /**
-     * Update the user's profile information.
-     */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function update(Request $request)
     {
         $user = Auth::user();
 
         $request->validate([
-            'name' => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
+            'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
-            'bio' => 'nullable|string|max:500',
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048|dimensions:min_width=100,min_height=100',
+            'bio' => 'nullable|string',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $user->name = $request->name;
         $user->email = $request->email;
         $user->bio = $request->bio;
-
-        if ($request->hasFile('avatar')) {
+        $user->avatar = $request->image;
+        if ($request->image != 'null') {
             // Xóa ảnh cũ nếu có
             if ($user->avatar) {
                 Storage::delete($user->avatar);
             }
 
             // Lưu ảnh mới
-            $path = $request->file('avatar')->store('avatars', 'public');
+            $path = $request->file('image')->store('avatars', 'public');
             $user->avatar = $path;
         }
-        return redirect()->route('profile.edit')->with('success', 'Profile updated successfully!');
 
+        $user->save();
+        $allData = $request->all();
+        return dd($allData); // Để debug và xem toàn bộ dữ liệu
+
+        // return 'okkk';
+        // return redirect()->route('profile.edit')->with('success', 'Profile updated successfully!');
     }
+
 
     /**
      * Delete the user's account.
